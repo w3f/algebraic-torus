@@ -1,10 +1,38 @@
+# finding a quadratic non-residue by brute force
+def quadratic_non_residue (basefield):
+    basefield_x.<X> = PolynomialRing(basefield)
+    for i in basefield:
+        potential_minpoly = X^2 - i
+        if potential_minpoly.is_irreducible():
+            return i
+
+def cubic_non_residue (basefield):
+    basefield_x.<X> = PolynomialRing(basefield)
+    for i in basefield:
+        potential_minpoly = X^3 - i
+        if potential_minpoly.is_irreducible():
+            return i
+
 #q = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab #bls12_381
 #q = 2147483647 
 q = 127
 qsqrt = q ^ 2
 Fqsqrt.<a> = FiniteField(qsqrt)
-Fqsqrt3.<b> = Fqsqrt.extension(3)
-Fqsqrt6.<c> = Fqsqrt3.extension(2)
+
+# instead  of simply making the extension by degree, we are explicitly specifiying
+# the minimal polynomial in hope that sage recognize its elements better in the
+# extension field
+# Fqsqrt3.<b> = Fqsqrt.extension(3)
+FqsqrtX.<X> = PolynomialRing(Fqsqrt)
+
+bcube = quadratic_non_residue(Fqsqrt)
+Fqsqrt3.<b> = Fqsqrt.extension(X^3 - bcube)
+
+thsqr = quadratic_non_residue(Fqsqrt)
+
+#using a quadratic non-resideu over Fq^2 to extend Fq^2^6 simplify
+#the norm equation
+Fqsqrt6.<c> = Fqsqrt3.extension(X^2 - thsqr)
 
 A3.<u1,u2,u3> = PolynomialRing(Fqsqrt6, 3)
 
@@ -15,21 +43,27 @@ sigma3 = Fqsqrt6.frobenius_endomorphism(6)
 
 sigma2_ext = A3.hom([u1,u2,u3], codomain=A3, base_map=sigma2)
 sigma4_ext = A3.hom([u1,u2,u3], codomain=A3, base_map=sigma4)
+sigma3_ext = A3.hom([u1,u2,u3], codomain=A3, base_map=sigma3)
 
-normal_basis = [b,b^(q),b^(q^2)]
+normal_basis = [b, b^(qsqrt),b^(qsqrt^2)]
 V, From_V, To_V = Fqsqrt3.vector_space(base=Fqsqrt, map=True, basis=normal_basis)
 assert(V.dimension() == 3)
 assert(V.are_linearly_dependent(normal_basis)==False)
 #check linear independence to make sure we have hit a normal basis.
 
 #represent gamma as a generic element in normal basis
-gamma = u1*b + (sigma2_ext(b))*u2 + (sigma4_ext(b))*u3
+gamma = u1*b + (sigma2(b))*u2 + (sigma4(b))*u3
 
 #hilbert 90 theorem says every element of normF6/F3 is of this form
 xi = (gamma + c)/(gamma + sigma3(c))
-                                       
+
 def norm_F6_over_F2(elm):
     return elm * sigma2_ext(elm) * sigma4_ext(elm)
+
+# just for testing hilbert 90
+def norm_F6_over_F3(elm):
+    return elm * sigma3_ext(elm)
+
 #    return elm * Fqsqrt6.frobenius_endomorphism(4)(elm) * Fqsqrt6.frobenius_endomorphism(8)(elm)
 
 # xi.num/x.denom = 1 (the last denom is to tell sage that the element is in the polynomial ring not
@@ -60,7 +94,7 @@ assert(Ugen.subs({u1: a_point[0], u2: a_point[1], u3: a_point[2]})== 0)
 #we make new affine space for new variable names
 A2xt.<t,v1,v2> = PolynomialRing(Fqsqrt6, 3)
 
-#cross the line from a to (a0 + (1, v1, v2)) with U
+#cross the line from a to (a0 + (1, v1, v2)) with U   
 line_at_u = Ugen.subs({u1: a_point[0] + t, u2:  a_point[1] + t*v1, u3: a_point[2] + t*v2})
 #here we just dividing by t because we know a0 is a ponit on U
 torus_t = (line_at_u/t).numerator()
@@ -84,7 +118,7 @@ t_in_v1_v2 =  t_in_v1_v2_num / t_in_v1_v2_denom
 #then you can subsitute for v1,v2 and t and get u1, u2 and u3 which you can subs
 u1_in_v1v2 =  a_point[0] + t_in_v1_v2
 u2_in_v1v2 =  a_point[1] + t_in_v1_v2*v1
-u3_in_v1v2 =  a_point[2] + t_in_v1_v2*v2
+pu3_in_v1v2 =  a_point[2] + t_in_v1_v2*v2
 
 #which gives you a gamma in v1 v2
 sigma2_ext = A2xt.hom([t,v1,v2], codomain=A2xt, base_map=sigma2)
@@ -95,3 +129,4 @@ gamma = u1_in_v1v2*b + (sigma2_ext(b))*u2_in_v1v2 + (sigma4_ext(b))*u3_in_v1v2
 #and finally the point on the torus
 torus_point_in_F6_in_v1v2 = (gamma + c)/(gamma + sigma3(c))
 
+        
