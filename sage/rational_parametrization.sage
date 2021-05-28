@@ -13,6 +13,12 @@ def cubic_non_residue (basefield):
         if potential_minpoly.is_irreducible():
             return i
 
+def non_cubic_irreducible_element(basefield):
+    while(true) :
+        test_element = FqsqrtX.irreducible_element(3)
+        if test_element.monomial_coefficient(X) != 0:
+            return test_element
+        
 #q = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab #bls12_381
 #q = 2147483647 
 q = 127
@@ -25,8 +31,9 @@ Fqsqrt.<a> = FiniteField(qsqrt)
 # Fqsqrt3.<b> = Fqsqrt.extension(3)
 FqsqrtX.<X> = PolynomialRing(Fqsqrt)
 
-bcube = quadratic_non_residue(Fqsqrt)
-Fqsqrt3.<b> = Fqsqrt.extension(X^3 - bcube)
+#bcube = quadratic_non_residue(Fqsqrt)
+#Fqsqrt3.<b> = Fqsqrt.extension(X^3 - bcube)
+Fqsqrt3.<b> = Fqsqrt.extension(non_cubic_irreducible_element(Fqsqrt))
 
 thsqr = quadratic_non_residue(Fqsqrt)
 
@@ -56,6 +63,12 @@ gamma = u1*b + (sigma2(b))*u2 + (sigma4(b))*u3
 
 #hilbert 90 theorem says every element of normF6/F3 is of this form
 xi = (gamma + c)/(gamma + sigma3(c))
+
+#our problem here is that this passes
+# a == (gamma(1,1,1) - 55)/92
+# but this fail to coerce
+# Fqsqrt(gamma(1,1,1))
+# TODO: find a way to map a in Fsqrt6 to a in Fqsrt
 
 def norm_F6_over_F2(elm):
     return elm * sigma2_ext(elm) * sigma4_ext(elm)
