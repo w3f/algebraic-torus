@@ -62,8 +62,11 @@ Fqsqrt3.<b1> = Fqsqrt.extension(3)
 # F_q^12
 # Fqsqrt3X.<X> = PolynomialRing(Fqsqrt3)
 
-# FqsqrtX.<X> = PolynomialRing(Fqsqrt)
-# bgen = (X^3 - bcube).roots()[0][0]
+FqsqrtX.<X> = PolynomialRing(Fqsqrt3)
+bgen = (X^3 - bcube).roots()[0][0]
+Fqsqrt3_cubic_as_FF = Hom(Fqsqrt3_cubic, Fqsqrt3)([bgen])
+# mid_hom  = 
+
 # mid_hom  = Hom(Fqsqrt3_cubic, Fqsqrt3)([bgen])
 
 #using a quadratic non-resideu over Fq^2 to extend Fq^2^6 simplify
@@ -73,12 +76,12 @@ Fqsqrt6.<c1> = Fqsqrt3.extension(2)
 
 Fqsqrt6X.<X> = PolynomialRing(Fqsqrt6)
 
-bgen = Fqsqrt6X(cubic_min_poly).roots()[0][0]
+# bgen = Fqsqrt6X(cubic_min_poly).roots()[0][0]
 
-mid_hom  = Fqsqrt3_cubic.hom([bgen])
+# mid_hom  = Fqsqrt3_cubic.hom([bgen])
 
 cgen = Fqsqrt6X(quadratic_min_poly).roots()[0][0]
-Fqsqrt6_sqrt_as_FF = Fqsqrt6_sqrt.hom([cgen], base_map=mid_hom)
+Fqsqrt6_sqrt_as_FF = Fqsqrt6_sqrt.hom([cgen], base_map=Fqsqrt3_cubic_as_FF)
 
 A3.<u1,u2,u3> = PolynomialRing(Fqsqrt6_sqrt, 3)
 
@@ -91,16 +94,24 @@ sigma2_ext = A3.hom([u1,u2,u3], codomain=A3, base_map=sigma2)
 sigma4_ext = A3.hom([u1,u2,u3], codomain=A3, base_map=sigma4)
 sigma3_ext = A3.hom([u1,u2,u3], codomain=A3, base_map=sigma3)
 
-#normal_basis = [b, b^(qsqrt),b^(qsqrt^2)]
-#V, From_V, To_V = Fqsqrt3.vector_space(base=Fqsqrt, map=True, basis=normal_basis)
-#assert(V.dimension() == 3)
-#assert(V.are_linearly_dependent(normal_basis)==False)
+# see: https://hackmd.io/pqLq5-MBSNGGjX-A6PFWBw
+#normal_basis = [b^2+b+1, sigma2(b^2+b+1), sigma4(b^2+b+1)]
+normal_basis_gen = b^2+b+1
+#normal_basis_gen = b
+#normal_basis = [b^2+b+1, sigma2(b^2+b+1), sigma4(b^2+b+1)]
+normal_basis = [normal_basis_gen, normal_basis_gen^(qsqrt), normal_basis_gen^(qsqrt^2)]
+#verifying Al's arg in https://hackmd.io/pqLq5-MBSNGGjX-A6PFWBw
+normal_basis_FF = [Fqsqrt3_cubic_as_FF(normal_basis_elm) for normal_basis_elm in normal_basis]
+#this step fails with ZeroDivisionError: input matrix must be nonsingular if it is not a basis
+V, From_V, To_V = Fqsqrt3.vector_space(base=Fqsqrt, map=True, basis=normal_basis_FF)
+assert(V.dimension() == 3)
+assert(V.are_linearly_dependent(normal_basis)==False)
 #check linear independence to make sure we have hit a normal basis.
 
 #represent gamma as a generic element in normal basis
-gamma = u1*b + (sigma2(b))*u2 + (sigma4(b))*u3
+gamma = u1*normal_basis_gen + (sigma2(normal_basis_gen))*u2 + (sigma4(normal_basis_gen))*u3
 
-f = FiniteFieldHomomorphism_generic(Hom(parent(a), parent(gamma(1,1,1)))); f
+#f = FiniteFieldHomomorphism_generic(Hom(parent(a), parent(gamma(1,1,1)))); f
 #hilbert 90 theorem says every element of normF6/F3 is of this form
 xi = (gamma + c)/(gamma + sigma3(c))
 
