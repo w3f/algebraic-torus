@@ -82,6 +82,7 @@ Fqsqrt6X.<X> = PolynomialRing(Fqsqrt6)
 
 cgen = Fqsqrt6X(quadratic_min_poly).roots()[0][0]
 Fqsqrt6_sqrt_as_FF = Fqsqrt6_sqrt.hom([cgen], base_map=Fqsqrt3_cubic_as_FF)
+Fqsqrt6_to_sqrt = Fqsqrt6_sqrt_as_FF.inverse_image
 
 A3.<u1,u2,u3> = PolynomialRing(Fqsqrt6_sqrt, 3)
 
@@ -89,6 +90,9 @@ sigma2 = Fqsqrt6_sqrt.frobenius_endomorphism(4)
 sigma4 = Fqsqrt6_sqrt.frobenius_endomorphism(8)
 
 sigma3 = Fqsqrt6_sqrt.frobenius_endomorphism(6)
+
+def sigma3_in_FF(ff_elm):
+  return Fqsqrt6_sqrt_as_FF(sigma3(Fqsqrt6_sqrt_as_FF.inverse_image(ff_elm)))
 
 sigma2_ext = A3.hom([u1,u2,u3], codomain=A3, base_map=sigma2)
 sigma4_ext = A3.hom([u1,u2,u3], codomain=A3, base_map=sigma4)
@@ -156,7 +160,8 @@ a_point = (V_tangent[0]['u1'], V_tangent[0]['u2'], V_tangent[0]['u3'])
 assert(Ugen.subs({u1: a_point[0], u2: a_point[1], u3: a_point[2]})== 0)
 
 #we make new affine space for new variable names
-A2xt.<t,v1,v2> = PolynomialRing(Fqsqrt6, 3)
+A2xt.<t,v1,v2> = PolynomialRing(Fqsqrt6_sqrt, 3)
+A2xt_FF.<tf,vf1,vf2> = PolynomialRing(Fqsqrt6, 3)
 
 #cross the line from a to (a0 + (1, v1, v2)) with U   
 line_at_u = Ugen.subs({u1: a_point[0] + t, u2:  a_point[1] + t*v1, u3: a_point[2] + t*v2})
@@ -182,15 +187,16 @@ t_in_v1_v2 =  t_in_v1_v2_num / t_in_v1_v2_denom
 #then you can subsitute for v1,v2 and t and get u1, u2 and u3 which you can subs
 u1_in_v1v2 =  a_point[0] + t_in_v1_v2
 u2_in_v1v2 =  a_point[1] + t_in_v1_v2*v1
-pu3_in_v1v2 =  a_point[2] + t_in_v1_v2*v2
+u3_in_v1v2 =  a_point[2] + t_in_v1_v2*v2
 
 #which gives you a gamma in v1 v2
 sigma2_ext = A2xt.hom([t,v1,v2], codomain=A2xt, base_map=sigma2)
 sigma4_ext = A2xt.hom([t,v1,v2], codomain=A2xt, base_map=sigma4)
 
-gamma = u1_in_v1v2*b + (sigma2_ext(b))*u2_in_v1v2 + (sigma4_ext(b))*u3_in_v1v2
+gamma = u1_in_v1v2*normal_basis_gen + (sigma2_ext(normal_basis_gen))*u2_in_v1v2 + (sigma4_ext(normal_basis_gen))*u3_in_v1v2
 
+Fqsqrt6_sqrt_as_FF_ext = A2xt.hom([tf,vf1,vf2], codomain=A2xt_FF, base_map=Fqsqrt6_sqrt_as_FF)
+gamma_in_FF = Fqsqrt6_sqrt_as_FF_ext(gamma.numerator())/Fqsqrt6_sqrt_as_FF_ext(gamma.denominator())
 #and finally the point on the torus
-torus_point_in_F6_in_v1v2 = (gamma + c)/(gamma + sigma3(c))
-
-        
+torus_point_in_F6_in_v1v2 = (gamma_in_FF + Fqsqrt6_sqrt_as_FF(c))/(gamma_in_FF + Fqsqrt6_sqrt_as_FF(sigma3(c)))
+torus_point_in_F6_sqrt_in_v1v2 = (gamma + c)/(gamma + sigma3(c))
