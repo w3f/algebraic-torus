@@ -25,42 +25,82 @@ q = 127
 qsqrt = q ^ 2
 Fqsqrt.<a> = FiniteField(qsqrt)
 
-# instead  of simply making the extension by degree, we are explicitly specifiying
-# the minimal polynomial in hope that sage recognize its elements better in the
-# extension field
-# Fqsqrt3.<b> = Fqsqrt.extension(3)
+#First we create the field superfield using sage default.
+Fqsqrt6.<c> = Fqsqrt.extension(6)
+
+#Then we embed our desirable generators in this field
 FqsqrtX.<X> = PolynomialRing(Fqsqrt)
 
-#bcube = quadratic_non_residue(Fqsqrt)
-#Fqsqrt3.<b> = Fqsqrt.extension(X^3 - bcube)
-Fqsqrt3.<b> = Fqsqrt.extension(non_cubic_irreducible_element(Fqsqrt))
+csquare = quadratic_non_residue(Fqsqrt)
+bcube = cubic_non_residue(Fqsqrt)
 
-thsqr = quadratic_non_residue(Fqsqrt)
+# vvvv This didn't work because the basefield is not Fqsqrt vvvv
+# we are going to make the intermediary extension because we need the minimal polynomials over Fq
+#bgen = (X^3 - bcube).roots()[0][0]
+#cgen = (X^2 - csquare).roots()[0][0]
+
+# Fqsqrt3.<b> = FiniteField(qsqrt, bgen.minpoly())
+# Fqsqrt2.<c> = FiniteField(qsqrt, cgen.minpoly())
+
+# Fqsqrt6.<d> = FiniteField(qsqrt^6, modulus = (bgen+cgen).minpoly())
+
+FqsqrtX.<X> = PolynomialRing(Fqsqrt)
+
+#we need to define the minpoly over the base field otherwise the
+#second extension use some random minpoly instead of X^2 - csquare
+#so we store them so we can abuse X later
+cubic_min_poly = X^3 - bcube
+quadratic_min_poly = X^2 - csquare
+
+# instead  of simply making the extension by degree, we are explicitly specifiying
+# the minimal polynomial
+Fqsqrt3_cubic.<b> = Fqsqrt.extension(cubic_min_poly)
+Fqsqrt3.<b1> = Fqsqrt.extension(3)
+
+# redefining the poly ring to able to solve the minpoly
+# to find the image of the generator in sage favorite version of
+# F_q^12
+# Fqsqrt3X.<X> = PolynomialRing(Fqsqrt3)
+
+# FqsqrtX.<X> = PolynomialRing(Fqsqrt)
+# bgen = (X^3 - bcube).roots()[0][0]
+# mid_hom  = Hom(Fqsqrt3_cubic, Fqsqrt3)([bgen])
 
 #using a quadratic non-resideu over Fq^2 to extend Fq^2^6 simplify
 #the norm equation
-Fqsqrt6.<c> = Fqsqrt3.extension(X^2 - thsqr)
+Fqsqrt6_sqrt.<c> = Fqsqrt3_cubic.extension(quadratic_min_poly)
+Fqsqrt6.<c1> = Fqsqrt3.extension(2)
 
-A3.<u1,u2,u3> = PolynomialRing(Fqsqrt6, 3)
+Fqsqrt6X.<X> = PolynomialRing(Fqsqrt6)
 
-sigma2 = Fqsqrt6.frobenius_endomorphism(4)
-sigma4 = Fqsqrt6.frobenius_endomorphism(8)
+bgen = Fqsqrt6X(cubic_min_poly).roots()[0][0]
 
-sigma3 = Fqsqrt6.frobenius_endomorphism(6)
+mid_hom  = Fqsqrt3_cubic.hom([bgen])
+
+cgen = Fqsqrt6X(quadratic_min_poly).roots()[0][0]
+Fqsqrt6_sqrt_as_FF = Fqsqrt6_sqrt.hom([cgen], base_map=mid_hom)
+
+A3.<u1,u2,u3> = PolynomialRing(Fqsqrt6_sqrt, 3)
+
+sigma2 = Fqsqrt6_sqrt.frobenius_endomorphism(4)
+sigma4 = Fqsqrt6_sqrt.frobenius_endomorphism(8)
+
+sigma3 = Fqsqrt6_sqrt.frobenius_endomorphism(6)
 
 sigma2_ext = A3.hom([u1,u2,u3], codomain=A3, base_map=sigma2)
 sigma4_ext = A3.hom([u1,u2,u3], codomain=A3, base_map=sigma4)
 sigma3_ext = A3.hom([u1,u2,u3], codomain=A3, base_map=sigma3)
 
-normal_basis = [b, b^(qsqrt),b^(qsqrt^2)]
-V, From_V, To_V = Fqsqrt3.vector_space(base=Fqsqrt, map=True, basis=normal_basis)
-assert(V.dimension() == 3)
-assert(V.are_linearly_dependent(normal_basis)==False)
+#normal_basis = [b, b^(qsqrt),b^(qsqrt^2)]
+#V, From_V, To_V = Fqsqrt3.vector_space(base=Fqsqrt, map=True, basis=normal_basis)
+#assert(V.dimension() == 3)
+#assert(V.are_linearly_dependent(normal_basis)==False)
 #check linear independence to make sure we have hit a normal basis.
 
 #represent gamma as a generic element in normal basis
 gamma = u1*b + (sigma2(b))*u2 + (sigma4(b))*u3
 
+f = FiniteFieldHomomorphism_generic(Hom(parent(a), parent(gamma(1,1,1)))); f
 #hilbert 90 theorem says every element of normF6/F3 is of this form
 xi = (gamma + c)/(gamma + sigma3(c))
 
