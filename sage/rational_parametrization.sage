@@ -18,7 +18,29 @@ def non_cubic_irreducible_element(basefield):
         test_element = FqsqrtX.irreducible_element(3)
         if test_element.monomial_coefficient(X) != 0:
             return test_element
-        
+
+def finite_field_morphism(domain, codmain, domain_min_poly = None, base_morphism = None):
+    """
+    compute a homomorhpism from domain to codomain.
+    It doesn't seem to be implemented for Quotion polynomail fields
+    in sage.
+    """
+    #we define the polynomial ring on the co-domain, in this way we can resolve
+    #the minimal polynomial of the domain generator in the codomain and find
+    #its image
+    codomainX.<X> = PolynomialRing(codmain)
+    if (not domain_min_poly):
+        domain_min_poly = domain.gen().minpoly()
+    domain_gen_in_codomain = codomainX(domain_min_poly).roots()[0][0]
+    return domain.hom([domain_gen_in_codomain], base_map=base_morphism)
+
+
+##############################################################
+# Fqsqrt3_cubicX.<X> = PolynomialRing(Fqsqrt3_cubic)         #
+# b1gen = (X^3 - bcube).roots()[0][0]                        #
+# FF_to_Fqsqrt3_cubic = Hom(Fqsqrt3, Fqsqrt3_cubic)([b1gen]) #
+##############################################################
+
 #q = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab #bls12_381
 #q = 2147483647 
 q = 127
@@ -57,15 +79,24 @@ quadratic_min_poly = X^2 - csquare
 Fqsqrt3_cubic.<b> = Fqsqrt.extension(cubic_min_poly)
 Fqsqrt3.<b1> = Fqsqrt.extension(3)
 
-# redefining the poly ring to able to solve the minpoly
-# to find the image of the generator in sage favorite version of
-# F_q^12
-# Fqsqrt3X.<X> = PolynomialRing(Fqsqrt3)
+####################################################################
+# # redefining the poly ring to able to solve the minpoly          #
+# # to find the image of the generator in sage favorite version of #
+# # F_q^12                                                         #
+# # Fqsqrt3X.<X> = PolynomialRing(Fqsqrt3)                         #
+#                                                                  #
+# FqsqrtX.<X> = PolynomialRing(Fqsqrt3)                            #
+# bgen = (X^3 - bcube).roots()[0][0]                               #
+# Fqsqrt3_cubic_as_FF = Hom(Fqsqrt3_cubic, Fqsqrt3)([bgen])        #
+####################################################################
+Fqsqrt3_cubic_as_FF = finite_field_morphism(Fqsqrt3_cubic, Fqsqrt3)
 
-FqsqrtX.<X> = PolynomialRing(Fqsqrt3)
-bgen = (X^3 - bcube).roots()[0][0]
-Fqsqrt3_cubic_as_FF = Hom(Fqsqrt3_cubic, Fqsqrt3)([bgen])
-# mid_hom  = 
+##############################################################
+# Fqsqrt3_cubicX.<X> = PolynomialRing(Fqsqrt3_cubic)         #
+# b1gen = (X^3 - bcube).roots()[0][0]                        #
+# FF_to_Fqsqrt3_cubic = Hom(Fqsqrt3, Fqsqrt3_cubic)([b1gen]) #
+##############################################################
+FF_to_Fqsqrt3_cubic = finite_field_morphism(Fqsqrt3, Fqsqrt3_cubic)
 
 # mid_hom  = Hom(Fqsqrt3_cubic, Fqsqrt3)([bgen])
 
@@ -74,15 +105,22 @@ Fqsqrt3_cubic_as_FF = Hom(Fqsqrt3_cubic, Fqsqrt3)([bgen])
 Fqsqrt6_sqrt.<c> = Fqsqrt3_cubic.extension(quadratic_min_poly)
 Fqsqrt6.<c1> = Fqsqrt3.extension(2)
 
-Fqsqrt6X.<X> = PolynomialRing(Fqsqrt6)
+###############################################################################
+# Fqsqrt6X.<X> = PolynomialRing(Fqsqrt6)                                      #
+# cgen = Fqsqrt6X(quadratic_min_poly).roots()[0][0]                           #
+# Fqsqrt6_sqrt_as_FF = Fqsqrt6_sqrt.hom([cgen], base_map=Fqsqrt3_cubic_as_FF) #
+###############################################################################
+Fqsqrt6_sqrt_as_FF = finite_field_morphism(Fqsqrt6_sqrt, Fqsqrt6, domain_min_poly = quadratic_min_poly, base_morphism=Fqsqrt3_cubic_as_FF)
 
-# bgen = Fqsqrt6X(cubic_min_poly).roots()[0][0]
+###########################################################################
+# Fqsqrt6_sqrtX.<X> = PolynomialRing(Fqsqrt6_sqrt)                        #
+# c1gen = Fqsqrt6_sqrtX(quadratic_min_poly).roots()[0][0]                 #
+# FF_to_Fqsqrt6_sqrt = Fqsqrt6.hom([c1gen], base_map=FF_to_Fqsqrt3_cubic) #
+###########################################################################
+FF_to_Fqsqrt6_sqrt = finite_field_morphism(Fqsqrt6, Fqsqrt6_sqrt, base_morphism=FF_to_Fqsqrt3_cubic)
 
-# mid_hom  = Fqsqrt3_cubic.hom([bgen])
-
-cgen = Fqsqrt6X(quadratic_min_poly).roots()[0][0]
-Fqsqrt6_sqrt_as_FF = Fqsqrt6_sqrt.hom([cgen], base_map=Fqsqrt3_cubic_as_FF)
-Fqsqrt6_to_sqrt = Fqsqrt6_sqrt_as_FF.inverse_image
+#Fqsqrt6_to_sqrt = Fqsqrt6_sqrt_as_FF.inverse_image
+#it is not a homomorphism so it is not very useful
 
 A3.<u1,u2,u3> = PolynomialRing(Fqsqrt6_sqrt, 3)
 
@@ -196,7 +234,11 @@ sigma4_ext = A2xt.hom([t,v1,v2], codomain=A2xt, base_map=sigma4)
 gamma = u1_in_v1v2*normal_basis_gen + (sigma2_ext(normal_basis_gen))*u2_in_v1v2 + (sigma4_ext(normal_basis_gen))*u3_in_v1v2
 
 Fqsqrt6_sqrt_as_FF_ext = A2xt.hom([tf,vf1,vf2], codomain=A2xt_FF, base_map=Fqsqrt6_sqrt_as_FF)
+FF_to_Fqsqrt6_sqrt_ext = A2xt_FF.hom([t,v1,v2], codomain=A2xt, base_map=FF_to_Fqsqrt6_sqrt)
+
 gamma_in_FF = Fqsqrt6_sqrt_as_FF_ext(gamma.numerator())/Fqsqrt6_sqrt_as_FF_ext(gamma.denominator())
 #and finally the point on the torus
 torus_point_in_F6_in_v1v2 = (gamma_in_FF + Fqsqrt6_sqrt_as_FF(c))/(gamma_in_FF + Fqsqrt6_sqrt_as_FF(sigma3(c)))
+torus_point_back_in_F6_sqrt_in_v1v2 = FF_to_Fqsqrt6_sqrt_ext(torus_point_in_F6_in_v1v2.numerator())/FF_to_Fqsqrt6_sqrt_ext(torus_point_in_F6_in_v1v2.denominator())
 torus_point_in_F6_sqrt_in_v1v2 = (gamma + c)/(gamma + sigma3(c))
+
