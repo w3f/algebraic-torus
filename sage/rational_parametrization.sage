@@ -34,13 +34,6 @@ def finite_field_morphism(domain, codmain, domain_min_poly = None, base_morphism
     domain_gen_in_codomain = codomainX(domain_min_poly).roots()[0][0]
     return domain.hom([domain_gen_in_codomain], base_map=base_morphism)
 
-
-##############################################################
-# Fqsqrt3_cubicX.<X> = PolynomialRing(Fqsqrt3_cubic)         #
-# b1gen = (X^3 - bcube).roots()[0][0]                        #
-# FF_to_Fqsqrt3_cubic = Hom(Fqsqrt3, Fqsqrt3_cubic)([b1gen]) #
-##############################################################
-
 #q = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab #bls12_381
 #q = 2147483647 
 q = 127
@@ -57,20 +50,23 @@ csquare = quadratic_non_residue(Fqsqrt)
 bcube = cubic_non_residue(Fqsqrt)
 
 # vvvv This didn't work because the basefield is not Fqsqrt vvvv
-# we are going to make the intermediary extension because we need the minimal polynomials over Fq
-#bgen = (X^3 - bcube).roots()[0][0]
-#cgen = (X^2 - csquare).roots()[0][0]
-
-# Fqsqrt3.<b> = FiniteField(qsqrt, bgen.minpoly())
-# Fqsqrt2.<c> = FiniteField(qsqrt, cgen.minpoly())
-
-# Fqsqrt6.<d> = FiniteField(qsqrt^6, modulus = (bgen+cgen).minpoly())
+#####################################################################################################
+# # we are going to make the intermediary extension because we need the minimal polynomials over Fq #
+# bgen = (X^3 - bcube).roots()[0][0]                                                                #
+# cgen = (X^2 - csquare).roots()[0][0]                                                              #
+#                                                                                                   #
+# Fqsqrt3.<b> = FiniteField(qsqrt, bgen.minpoly())                                                  #
+# Fqsqrt2.<c> = FiniteField(qsqrt, cgen.minpoly())                                                  #
+#                                                                                                   #
+# Fqsqrt6.<d> = FiniteField(qsqrt^6, modulus = (bgen+cgen).minpoly())                               #
+#####################################################################################################
 
 FqsqrtX.<X> = PolynomialRing(Fqsqrt)
 
 #we need to define the minpoly over the base field otherwise the
 #second extension use some random minpoly instead of X^2 - csquare
-#so we store them so we can abuse X later
+#also only polynomial over base field can be coerce to the sage
+# favorite finite field, which we need to do to compute the morphisms
 cubic_min_poly = X^3 - bcube
 quadratic_min_poly = X^2 - csquare
 
@@ -79,48 +75,19 @@ quadratic_min_poly = X^2 - csquare
 Fqsqrt3_cubic.<b> = Fqsqrt.extension(cubic_min_poly)
 Fqsqrt3.<b1> = Fqsqrt.extension(3)
 
-####################################################################
-# # redefining the poly ring to able to solve the minpoly          #
-# # to find the image of the generator in sage favorite version of #
-# # F_q^12                                                         #
-# # Fqsqrt3X.<X> = PolynomialRing(Fqsqrt3)                         #
-#                                                                  #
-# FqsqrtX.<X> = PolynomialRing(Fqsqrt3)                            #
-# bgen = (X^3 - bcube).roots()[0][0]                               #
-# Fqsqrt3_cubic_as_FF = Hom(Fqsqrt3_cubic, Fqsqrt3)([bgen])        #
-####################################################################
 Fqsqrt3_cubic_as_FF = finite_field_morphism(Fqsqrt3_cubic, Fqsqrt3)
-
-##############################################################
-# Fqsqrt3_cubicX.<X> = PolynomialRing(Fqsqrt3_cubic)         #
-# b1gen = (X^3 - bcube).roots()[0][0]                        #
-# FF_to_Fqsqrt3_cubic = Hom(Fqsqrt3, Fqsqrt3_cubic)([b1gen]) #
-##############################################################
 FF_to_Fqsqrt3_cubic = finite_field_morphism(Fqsqrt3, Fqsqrt3_cubic)
-
-# mid_hom  = Hom(Fqsqrt3_cubic, Fqsqrt3)([bgen])
 
 #using a quadratic non-resideu over Fq^2 to extend Fq^2^6 simplify
 #the norm equation
 Fqsqrt6_sqrt.<c> = Fqsqrt3_cubic.extension(quadratic_min_poly)
 Fqsqrt6.<c1> = Fqsqrt3.extension(2)
 
-###############################################################################
-# Fqsqrt6X.<X> = PolynomialRing(Fqsqrt6)                                      #
-# cgen = Fqsqrt6X(quadratic_min_poly).roots()[0][0]                           #
-# Fqsqrt6_sqrt_as_FF = Fqsqrt6_sqrt.hom([cgen], base_map=Fqsqrt3_cubic_as_FF) #
-###############################################################################
+# sage can't coerce polynomial defined over Fqsqrt6_sqrt[X] with coefficient in Fqsqrt
+# (indeed that was the whole problem which forced us to define the morpshism explicitly)
+# so we need to provide the minimal polynomial in Fqsqrt explicitly
 Fqsqrt6_sqrt_as_FF = finite_field_morphism(Fqsqrt6_sqrt, Fqsqrt6, domain_min_poly = quadratic_min_poly, base_morphism=Fqsqrt3_cubic_as_FF)
-
-###########################################################################
-# Fqsqrt6_sqrtX.<X> = PolynomialRing(Fqsqrt6_sqrt)                        #
-# c1gen = Fqsqrt6_sqrtX(quadratic_min_poly).roots()[0][0]                 #
-# FF_to_Fqsqrt6_sqrt = Fqsqrt6.hom([c1gen], base_map=FF_to_Fqsqrt3_cubic) #
-###########################################################################
 FF_to_Fqsqrt6_sqrt = finite_field_morphism(Fqsqrt6, Fqsqrt6_sqrt, base_morphism=FF_to_Fqsqrt3_cubic)
-
-#Fqsqrt6_to_sqrt = Fqsqrt6_sqrt_as_FF.inverse_image
-#it is not a homomorphism so it is not very useful
 
 A3.<u1,u2,u3> = PolynomialRing(Fqsqrt6_sqrt, 3)
 
@@ -142,7 +109,7 @@ normal_basis_gen = b^2+b+1
 #normal_basis_gen = b
 #normal_basis = [b^2+b+1, sigma2(b^2+b+1), sigma4(b^2+b+1)]
 normal_basis = [normal_basis_gen, normal_basis_gen^(qsqrt), normal_basis_gen^(qsqrt^2)]
-#verifying Al's arg in https://hackmd.io/pqLq5-MBSNGGjX-A6PFWBw
+#verifying Al's argument in https://hackmd.io/pqLq5-MBSNGGjX-A6PFWBw
 normal_basis_FF = [Fqsqrt3_cubic_as_FF(normal_basis_elm) for normal_basis_elm in normal_basis]
 #this step fails with ZeroDivisionError: input matrix must be nonsingular if it is not a basis
 V, From_V, To_V = Fqsqrt3.vector_space(base=Fqsqrt, map=True, basis=normal_basis_FF)
@@ -153,15 +120,14 @@ assert(V.are_linearly_dependent(normal_basis)==False)
 #represent gamma as a generic element in normal basis
 gamma = u1*normal_basis_gen + (sigma2(normal_basis_gen))*u2 + (sigma4(normal_basis_gen))*u3
 
-#f = FiniteFieldHomomorphism_generic(Hom(parent(a), parent(gamma(1,1,1)))); f
 #hilbert 90 theorem says every element of normF6/F3 is of this form
 xi = (gamma + c)/(gamma + sigma3(c))
 
-#our problem here is that this passes
+#our problem here was that that this passes
 # a == (gamma(1,1,1) - 55)/92
 # but this fail to coerce
 # Fqsqrt(gamma(1,1,1))
-# TODO: find a way to map a in Fsqrt6 to a in Fqsrt
+# Hence we map gamma Fsqrt6_sqrt -> Fsqrt6 where such a coercion is possible. 
 
 def norm_F6_over_F2(elm):
     return elm * sigma2_ext(elm) * sigma4_ext(elm)
@@ -199,7 +165,9 @@ assert(Ugen.subs({u1: a_point[0], u2: a_point[1], u3: a_point[2]})== 0)
 
 #we make new affine space for new variable names
 A2xt.<t,v1,v2> = PolynomialRing(Fqsqrt6_sqrt, 3)
+A2xt = A2xt.fraction_field()
 A2xt_FF.<tf,vf1,vf2> = PolynomialRing(Fqsqrt6, 3)
+A2xt_FF = A2xt_FF.fraction_field()
 
 #cross the line from a to (a0 + (1, v1, v2)) with U   
 line_at_u = Ugen.subs({u1: a_point[0] + t, u2:  a_point[1] + t*v1, u3: a_point[2] + t*v2})
@@ -236,9 +204,10 @@ gamma = u1_in_v1v2*normal_basis_gen + (sigma2_ext(normal_basis_gen))*u2_in_v1v2 
 Fqsqrt6_sqrt_as_FF_ext = A2xt.hom([tf,vf1,vf2], codomain=A2xt_FF, base_map=Fqsqrt6_sqrt_as_FF)
 FF_to_Fqsqrt6_sqrt_ext = A2xt_FF.hom([t,v1,v2], codomain=A2xt, base_map=FF_to_Fqsqrt6_sqrt)
 
-gamma_in_FF = Fqsqrt6_sqrt_as_FF_ext(gamma.numerator())/Fqsqrt6_sqrt_as_FF_ext(gamma.denominator())
+gamma_in_FF = Fqsqrt6_sqrt_as_FF_ext(gamma)
+
 #and finally the point on the torus
 torus_point_in_F6_in_v1v2 = (gamma_in_FF + Fqsqrt6_sqrt_as_FF(c))/(gamma_in_FF + Fqsqrt6_sqrt_as_FF(sigma3(c)))
-torus_point_back_in_F6_sqrt_in_v1v2 = FF_to_Fqsqrt6_sqrt_ext(torus_point_in_F6_in_v1v2.numerator())/FF_to_Fqsqrt6_sqrt_ext(torus_point_in_F6_in_v1v2.denominator())
+torus_point_back_in_F6_sqrt_in_v1v2 = FF_to_Fqsqrt6_sqrt_ext(torus_point_in_F6_in_v1v2)
 torus_point_in_F6_sqrt_in_v1v2 = (gamma + c)/(gamma + sigma3(c))
 
