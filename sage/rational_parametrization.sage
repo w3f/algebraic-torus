@@ -1,3 +1,5 @@
+import pdb
+
 # finding a quadratic non-residue by brute force
 def quadratic_non_residue (basefield):
     basefield_x.<X> = PolynomialRing(basefield)
@@ -41,7 +43,9 @@ def generate_field_tower_quadratic_cubic_quadratic(q, quad_nr1 = None, cub_nr = 
     cub_nr1 is a cubic nonresidue over Fq2 represented as coefficient of {1, sqrt{quad_nr1}} basis
     quad_nr2 is a quadratic nonresidue over Fq6 represented as coefficient of {1, root3(cub_nr), root3(cub_nr)²}
     """
-    FqsqrtX.<X> = PolynomialRing(FiniteField(q))
+    import pdb
+    pdb.set_trace()
+    FqX.<X> = PolynomialRing(FiniteField(q))#, implementation="NTL")
     
     qsqrt = q ^ 2
     qsqrt_modulus = None
@@ -76,7 +80,6 @@ def generate_field_tower_quadratic_cubic_quadratic(q, quad_nr1 = None, cub_nr = 
     # the minimal polynomial
     Fqsqrt3_cubic.<b> = Fqsqrt.extension(cubic_min_poly)
 
-
     #using a quadratic non-resideu over F(q^2)³ to extend Fq^2^6 simplify
     #the norm equation
     Fqsqrt3X.<X> = PolynomialRing(Fqsqrt3_cubic)
@@ -88,16 +91,16 @@ def generate_field_tower_quadratic_cubic_quadratic(q, quad_nr1 = None, cub_nr = 
     quadratic_min_poly = X**2 - csquare
     Fqsqrt6_sqrt.<c> = Fqsqrt3_cubic.extension(quadratic_min_poly)
 
+    return Fqsqrt, Fqsqrt3_cubic, Fqsqrt6_sqrt, quadratic_min_poly
 
-    return Fqsqrt, Fqsqrt3, Fqsqrt6
-
-def algebraic_torus_rational_parametrization(q, Fq2, Fq6, Fq12):
+def algebraic_torus_rational_parametrization(q, Fq2, Fq6, Fq12, Fq12_over_Fq6_quadratic_min_poly):
     qsqrt = q ^ 2
     Fqsqrt.<a> = Fq2
+    Fqsqrt3_cubic = Fq6
+    Fqsqrt6_sqrt = Fq12
 
     #First we create the field superfield using sage default.
     Fqsqrt6.<c> = Fqsqrt.extension(6)
-
 
     Fqsqrt3.<b1> = Fqsqrt.extension(3)
 
@@ -109,6 +112,7 @@ def algebraic_torus_rational_parametrization(q, Fq2, Fq6, Fq12):
     # sage can't coerce polynomial defined over Fqsqrt6_sqrt[X] with coefficient in Fqsqrt
     # (indeed that was the whole problem which forced us to define the morpshism explicitly)
     # so we need to provide the minimal polynomial in Fqsqrt explicitly
+    quadratic_min_poly = Fq12_over_Fq6_quadratic_min_poly
     Fqsqrt6_sqrt_as_FF = finite_field_morphism(Fqsqrt6_sqrt, Fqsqrt6, domain_min_poly = quadratic_min_poly, base_morphism=Fqsqrt3_cubic_as_FF)
     FF_to_Fqsqrt6_sqrt = finite_field_morphism(Fqsqrt6, Fqsqrt6_sqrt, base_morphism=FF_to_Fqsqrt3_cubic)
 
@@ -140,7 +144,7 @@ def algebraic_torus_rational_parametrization(q, Fq2, Fq6, Fq12):
     #normal_basis = [b^2+b+1, sigma2(b^2+b+1), sigma4(b^2+b+1)]
     normal_basis_gen = b^2+b+1
     #normal_basis_gen = b
-    3#normal_basis = [b^2+b+1, sigma2(b^2+b+1), sigma4(b^2+b+1)]
+    #normal_basis = [b^2+b+1, sigma2(b^2+b+1), sigma4(b^2+b+1)]
     normal_basis = [normal_basis_gen, normal_basis_gen^(qsqrt), normal_basis_gen^(qsqrt^2)]
     #verifying Al's argument in https://hackmd.io/pqLq5-MBSNGGjX-A6PFWBw
     normal_basis_FF = [Fqsqrt3_cubic_as_FF(normal_basis_elm) for normal_basis_elm in normal_basis]
@@ -258,7 +262,9 @@ def convert_ark_big_int_to_int(big_int_array):
 if __name__ == '__main__':
     #q = 127
     #print(algebraic_torus_rational_parametrization(127))
-    #q = 2147483647 
+    q_30bit = 2147483647
+    q101 = 101
+    
 
     #bls12_381
     q = 0x1a0111ea397fe69a4b1ba7b6434bacd764774b84f38512bf6730d2a0f6b0f6241eabfffeb153ffffb9feffffffffaaab 
@@ -302,6 +308,7 @@ if __name__ == '__main__':
     #nonresidue_quadratic_fq6 = cubic_root(nonresidue_cubic_fq2)
     nonresidue_quadratic_fq6 = [0, 1, 0];
 
-    Fq2, Fq6, Fq12 = generate_field_tower_quadratic_cubic_quadratic(q, nonresidue_quadratic_fq, nonresidue_cubic_fq2, nonresidue_quadratic_fq6)
-    torus_param = algebraic_torus_rational_parametrization(q, Fq2, Fq6, Fq12)
+    #Fq2, Fq6, Fq12 = generate_field_tower_quadratic_cubic_quadratic(q, nonresidue_quadratic_fq, nonresidue_cubic_fq2, nonresidue_quadratic_fq6)
+    Fq2, Fq6, Fq12, Fq12_over_Fq6_quadratic_min_poly = generate_field_tower_quadratic_cubic_quadratic(q101)
+    torus_param = algebraic_torus_rational_parametrization(q, Fq2, Fq6, Fq12, Fq12_over_Fq6_quadratic_min_poly)
     print(torus_param)
