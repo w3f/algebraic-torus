@@ -21,7 +21,7 @@ def non_cubic_irreducible_element(basefield):
         if test_element.monomial_coefficient(X) != 0:
             return test_element
 
-def finite_field_morphism(domain, codmain, domain_min_poly = None, base_morphism = None):
+def finite_field_morphism(domain, codomain, domain_min_poly = None, base_morphism = None):
     """
     compute a homomorhpism from domain to codomain.
     It doesn't seem to be implemented for Quotion polynomail fields
@@ -30,10 +30,18 @@ def finite_field_morphism(domain, codmain, domain_min_poly = None, base_morphism
     #we define the polynomial ring on the co-domain, in this way we can resolve
     #the minimal polynomial of the domain generator in the codomain and find
     #its image
-    codomainX.<X> = PolynomialRing(codmain)
+    codomainX.<X> = PolynomialRing(codomain)
     if (not domain_min_poly):
         domain_min_poly = domain.gen().minpoly()
-    domain_gen_in_codomain = codomainX(domain_min_poly).roots()[0][0]
+    #TODO: Sage doesn't know how to codomainX(domain_min_poly)
+    # we should apply base_morphism to each coefficient and multiply with X^i in codomainX
+    domain_min_poly_in_codomain_X = None
+    if base_morphism:
+        domain_min_poly_in_codomain_X = sum([base_morphism(domain_min_poly.coefficients(sparse=false)[i])*X^i for i in range(domain_min_poly.degree()+1)])
+    else:
+        domain_min_poly_in_codomain_X = codomainX(domain_min_poly)
+        
+    domain_gen_in_codomain = domain_min_poly_in_codomain_X.roots()[0][0]
     return domain.hom([domain_gen_in_codomain], base_map=base_morphism)
 
 def generate_field_tower_quadratic_cubic_quadratic(q, quad_nr1 = None, cub_nr = None, quad_nr2=None):
@@ -43,8 +51,6 @@ def generate_field_tower_quadratic_cubic_quadratic(q, quad_nr1 = None, cub_nr = 
     cub_nr1 is a cubic nonresidue over Fq2 represented as coefficient of {1, sqrt{quad_nr1}} basis
     quad_nr2 is a quadratic nonresidue over Fq6 represented as coefficient of {1, root3(cub_nr), root3(cub_nr)²}
     """
-    import pdb
-    pdb.set_trace()
     FqX.<X> = PolynomialRing(FiniteField(q))#, implementation="NTL")
     
     qsqrt = q ^ 2
@@ -86,8 +92,6 @@ def generate_field_tower_quadratic_cubic_quadratic(q, quad_nr1 = None, cub_nr = 
 
     csquare = (quad_nr2 == None) and quadratic_non_residue(Fqsqrt) or quad_nr2[0]+ quad_nr2[1]*b + quad_nr2[2]*b**2
 
-    import pdb
-    pdb.set_trace()
     quadratic_min_poly = X**2 - csquare
     Fqsqrt6_sqrt.<c> = Fqsqrt3_cubic.extension(quadratic_min_poly)
 
@@ -132,8 +136,8 @@ def algebraic_torus_rational_parametrization(q, Fq2, Fq6, Fq12, Fq12_over_Fq6_qu
 
     A3_over_Fqsqrt3.<u1,u2,u3> = PolynomialRing(Fqsqrt3_cubic, 3)
 
-    sigma2_cubic = Fqsqrt6_cubic.frobenius_endomorphism(4)
-    sigma4_cubic = Fqsqrt6_cubic.frobenius_endomorphism(8)
+    sigma2_cubic = Fqsqrt3_cubic.frobenius_endomorphism(4)
+    sigma4_cubic = Fqsqrt3_cubic.frobenius_endomorphism(8)
 
     sigma2_cubic_ext = A3_over_Fqsqrt3.hom([u1,u2,u3], codomain=A3_over_Fqsqrt3, base_map=sigma2_cubic)
     sigma4_cubic_ext = A3_over_Fqsqrt3.hom([u1,u2,u3], codomain=A3_over_Fqsqrt3, base_map=sigma4_cubic)
@@ -142,6 +146,7 @@ def algebraic_torus_rational_parametrization(q, Fq2, Fq6, Fq12, Fq12_over_Fq6_qu
 
     # see: https://hackmd.io/pqLq5-MBSNGGjX-A6PFWBw
     #normal_basis = [b^2+b+1, sigma2(b^2+b+1), sigma4(b^2+b+1)]
+    (b,) = Fqsqrt3_cubic._first_ngens(1)
     normal_basis_gen = b^2+b+1
     #normal_basis_gen = b
     #normal_basis = [b^2+b+1, sigma2(b^2+b+1), sigma4(b^2+b+1)]
@@ -155,10 +160,12 @@ def algebraic_torus_rational_parametrization(q, Fq2, Fq6, Fq12, Fq12_over_Fq6_qu
     #check linear independence to make sure we have hit a normal basis.
 
     #represent gamma as a generic element in normal basis
-    gamma = u1*normal_basis_gen + (sigma2(normal_basis_gen))*u2 + (sigma4(normal_basis_gen))*u3
+    gamma = u1*normal_basis_gen + (sigma2_cubic(normal_basis_gen))*u2 + (sigma4_cubic(normal_basis_gen))*u3
+    #gamma = u1*normal_basis_FF[0] + (normal_basis_FF[1])*u2 + (normal_basis_FF[2])*u3
 
     #hilbert 90 theorem says every element of normF6/F3 is of this form
-    xi = (gamma + c)/(gamma + sigma3(c))
+    #xi = (gamma + c)/(gamma + sigma3(c))
+    xi = (extend_A3_base(gamma) + FF_to_Fqsqrt6_sqrt(c1))/(extend_A3_base(gamma) + sigma3(FF_to_Fqsqrt6_sqrt(c1)))
 
     #our problem here was that that this passes
     # a == (gamma(1,1,1) - 55)/92
@@ -206,7 +213,7 @@ def algebraic_torus_rational_parametrization(q, Fq2, Fq6, Fq12, Fq12_over_Fq6_qu
     A2xt_FF.<tf,vf1,vf2> = PolynomialRing(Fqsqrt6, 3)
     A2xt_FF = A2xt_FF.fraction_field()
 
-    A2xt_FF.hom([t,v1,v2], codomain=A2xt_cubic, base_map=FF_to_Fqsqrt6_sqrt*Fq)
+    A2xt_FF.hom([t,v1,v2], codomain=A2xt, base_map=FF_to_Fqsqrt6_sqrt)
 
     #cross the line from a to (a0 + (1, v1, v2)) with U   
     line_at_u = Ugen.subs({u1: a_point[0] + t, u2:  a_point[1] + t*v1, u3: a_point[2] + t*v2})
@@ -248,7 +255,7 @@ def algebraic_torus_rational_parametrization(q, Fq2, Fq6, Fq12, Fq12_over_Fq6_qu
     #and finally the point on the torus
     torus_point_in_F6_in_v1v2 = (gamma_in_FF + Fqsqrt6_sqrt_as_FF(c))/(gamma_in_FF + Fqsqrt6_sqrt_as_FF(sigma3(c)))
     torus_point_back_in_F6_sqrt_in_v1v2 = FF_to_Fqsqrt6_sqrt_ext(torus_point_in_F6_in_v1v2)
-    torus_point_in_F6_sqrt_in_v1v2 = (gamma + c)/(gamma + sigma3(c))
+    torus_point_in_F6_sqrt_in_v1v2 = (gamma + FF_to_Fqsqrt6_sqrt(c1))/(gamma + sigma3(FF_to_Fqsqrt6_sqrt(c1)))
 
     return torus_point_back_in_F6_sqrt_in_v1v2
 
