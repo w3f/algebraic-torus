@@ -111,6 +111,7 @@ def algebraic_torus_rational_parametrization(q, Fq2 = None, Fq6 = None, Fq12 = N
     #Fqsqrt3_cubic = Fq6 and Fq6 or Fqsqrt.extension(3)
     #Fqsqrt6_quad = Fq12 and Fq12 or Fqsqrt3_cubic.extension(2)
     Fqsqrt = Fq2 and Fq2 or FiniteField(qsqrt)
+    Fqsqrt2_quad = FiniteField(qsqrt**2)
     Fqsqrt3_cubic = Fq6 and Fq6 or FiniteField(qsqrt^3)
     Fqsqrt6_quad = Fq12 and Fq12 or FiniteField(qsqrt^6)
     # generic sage extension are always over prime fields so we have to be explicit.
@@ -142,7 +143,6 @@ def algebraic_torus_rational_parametrization(q, Fq2 = None, Fq6 = None, Fq12 = N
 
     sigma2 = Fqsqrt6_quad.frobenius_endomorphism(4)
     sigma4 = Fqsqrt6_quad.frobenius_endomorphism(8)
-
     sigma3 = Fqsqrt6_quad.frobenius_endomorphism(6)
 
     #def sigma3_in_FF():
@@ -153,12 +153,13 @@ def algebraic_torus_rational_parametrization(q, Fq2 = None, Fq6 = None, Fq12 = N
     sigma3_ext = A3.hom([u1e,u2e,u3e], codomain=A3, base_map=sigma3)
 
     A3_over_Fqsqrt3.<u1,u2,u3> = PolynomialRing(Fqsqrt3_cubic, 3)
-
+    
+    sigma1_cubic = Fqsqrt3_cubic.frobenius_endomorphism(2)
     sigma2_cubic = Fqsqrt3_cubic.frobenius_endomorphism(4)
-    sigma4_cubic = Fqsqrt3_cubic.frobenius_endomorphism(8)
 
+    pdb.set_trace()
+    sigma1_cubic_ext = A3_over_Fqsqrt3.hom([u1,u2,u3], codomain=A3_over_Fqsqrt3, base_map=sigma1_cubic)
     sigma2_cubic_ext = A3_over_Fqsqrt3.hom([u1,u2,u3], codomain=A3_over_Fqsqrt3, base_map=sigma2_cubic)
-    sigma4_cubic_ext = A3_over_Fqsqrt3.hom([u1,u2,u3], codomain=A3_over_Fqsqrt3, base_map=sigma4_cubic)
 
     extend_A3_base = A3_over_Fqsqrt3.hom([u1,u2,u3], codomain=A3)
 
@@ -200,7 +201,7 @@ def algebraic_torus_rational_parametrization(q, Fq2 = None, Fq6 = None, Fq12 = N
         pass
 
     #represent gamma as a generic element in normal basis
-    gamma = u1*normal_basis_gen + (sigma2_cubic(normal_basis_gen))*u2 + (sigma4_cubic(normal_basis_gen))*u3
+    gamma = u1*normal_basis_gen + (sigma1_cubic(normal_basis_gen))*u2 + (sigma2_cubic(normal_basis_gen))*u3
     #gamma = u1*normal_basis_FF[0] + (normal_basis_FF[1])*u2 + (normal_basis_FF[2])*u3
 
     #hilbert 90 theorem says every element of normF6/F3 is of this form
@@ -220,12 +221,29 @@ def algebraic_torus_rational_parametrization(q, Fq2 = None, Fq6 = None, Fq12 = N
     def norm_F6_over_F3(elm):
         return elm * sigma3_ext(elm)
 
+    # just for testing that our norms are correct
+    def norm_F6_over_F(elm):
+        return elm * sigma4_ext(sigma3_ext(elm)) * sigma2_ext(elm)  * sigma3_ext(elm) * sigma4_ext(elm) * sigma2_ext(sigma3_ext(elm))
+
     #    return elm * Fqsqrt6.frobenius_endomorphism(4)(elm) * Fqsqrt6.frobenius_endomorphism(8)(elm)
 
     # xi.num/x.denom = 1 (the last denom is to tell sage that the element is in the polynomial ring not
     # the field of fraction.
-    Ugen = ((norm_F6_over_F2(xi.numerator())) - norm_F6_over_F2(xi.denominator())).numerator()
+    Ugen1 = ((norm_F6_over_F2(xi.numerator())) - norm_F6_over_F2(xi.denominator())).numerator()
+    Ugen2 =  norm_F6_over_F2(extend_A3_base(gamma) + c) - norm_F6_over_F2(extend_A3_base(gamma) + sigma3(c))
 
+    # We actually need to generate Ugen using a square root x such that Fq(x) = Fq^2(x)
+    pdb.set_trace()
+    found_non_residue = False
+    non_residue = 0
+    while(not(found_non_residue)):
+        non_residue = Fqsqrt.random_element()
+        if not non_residue.is_square() == False:
+            found_non_residue = True
+
+    assert(Fqsqrt2_quad(non_residue).is_square())
+    Ugen2 = (sigma_ext(gamma)*sigma2_ext(gamma)+
+    
     #we make new affine space for new variable names
     A2xt.<t,v1,v2> = PolynomialRing(Fqsqrt6_quad, 3)
     A2xt = A2xt.fraction_field()
@@ -258,15 +276,16 @@ def algebraic_torus_rational_parametrization(q, Fq2 = None, Fq6 = None, Fq12 = N
 
         #A2xt_FF.hom([t,v1,v2], codomain=A2xt, base_map=FF_to_Fqsqrt6_quad)
 
-        #cross the line from a to (a0 + (1, v1, v2)) with U   
-        line_at_u = Ugen.subs({u1e: a_point[0] + t, u2e:  a_point[1] + t*v1, u3e: a_point[2] + t*v2})
+        pdb.set_trace()
+        #cross the line from a0 to (a0 + (1, v1, v2)) with U   
+        line_cross_U = Ugen.subs({u1e: a_point[0] + t, u2e:  a_point[1] + t*v1, u3e: a_point[2] + t*v2})
         #here we just dividing by t because we know a0 is a ponit on U
-        torus_t = (line_at_u/t).numerator()
+        assert(line_cross_U.subs({t : 0}) == 0)
+        torus_t = (line_cross_U/t).numerator()
 
         #this gives you a degree 1 equation for t, to eleminate t and hence
         #parametrizing the torus only with v1 and v2
         #we solve it for t manually as I couldn't find a way to ask Sage to do it
-
         t_in_v1_v2_num = 0
         t_in_v1_v2_denom = 0 
         for i in range(0, len(torus_t.monomials())):
@@ -287,17 +306,20 @@ def algebraic_torus_rational_parametrization(q, Fq2 = None, Fq6 = None, Fq12 = N
         u2_in_v1v2 =  a_point[1] + t_in_v1_v2*v1
         u3_in_v1v2 =  a_point[2] + t_in_v1_v2*v2
 
-        return (u1_in_v1v2, u2_in_v1v2, u2_in_v1v2)
+        return (u1_in_v1v2, u2_in_v1v2, u3_in_v1v2)
 
     pdb.set_trace()
     u_in_v1v2 = project_hypersurface_on_to_affine_plane(Ugen)
     #which gives you a gamma in v1 v2
-    sigma2_ext = A2xt.hom([t,v1,v2], codomain=A2xt, base_map=sigma2)
-    sigma4_ext = A2xt.hom([t,v1,v2], codomain=A2xt, base_map=sigma4)
+    sigma1_cubic_in_Fqsqrt6 = Fqsqrt6_quad.frobenius_endomorphism(2)
+    sigma2_cubic_in_Fqsqrt6 = Fqsqrt6_quad.frobenius_endomorphism(4)
+    sigma1_cubic_ext_to_v1v2 = A2xt.hom([t,v1,v2], codomain=A2xt, base_map=sigma1_cubic_in_Fqsqrt6)
+    sigma2_cubic_ext_to_v1v2 = A2xt.hom([t,v1,v2], codomain=A2xt, base_map=sigma4_cubic_in_Fqsqrt6)
 
-    gamma = u_in_v1v2[0]*normal_basis_gen + (sigma2_ext(normal_basis_gen))*u_in_v1v2[1] + (sigma4_ext(normal_basis_gen))*u_in_v1v2[2]
+    pdb.set_trace()
+    gamma = u_in_v1v2[0]*normal_basis_gen + (sigma1_cubic_ext_to_v1v2(normal_basis_gen))*u_in_v1v2[1] + (sigma2_cubic_ext_to_v1v2(normal_basis_gen))*u_in_v1v2[2]
 
-        #Fqsqrt6_quad_as_FF_ext = A2xt.hom([tf,vf1,vf2], codomain=A2xt_FF, base_map=Fqsqrt6_quad_as_FF)
+    #Fqsqrt6_quad_as_FF_ext = A2xt.hom([tf,vf1,vf2], codomain=A2xt_FF, base_map=Fqsqrt6_quad_as_FF)
     #FF_to_Fqsqrt6_quad_ext = A2xt_FF.hom([t,v1,v2], codomain=A2xt, base_map=FF_to_Fqsqrt6_quad)
 
     #gamma_in_FF = Fqsqrt6_quad_as_FF_ext(gamma)
@@ -307,9 +329,22 @@ def algebraic_torus_rational_parametrization(q, Fq2 = None, Fq6 = None, Fq12 = N
     #torus_point_back_in_F6_sqrt_in_v1v2 = FF_to_Fqsqrt6_quad_ext(torus_point_in_F6_in_v1v2)
     torus_point_in_F6_sqrt_in_v1v2 = (gamma + c)/(gamma + sigma3(c))
     
-    pdb.set_trace()
+    def rho_u(torus_element):
+        pdb.set_trace()
+        assert(norm_F6_over_F(torus_element) == 1), "given element is not on the torus"
+        beta = Fqsqrt6_quad_over_cubic(torus_element).vector()
+        gamma = (1 + beta[0])/beta[1]
+        assert((gamma + c)/(gamma + sigma3(c)) == torus_element)
+        du_in_poly_basis = Fqsqrt3_cubic_over_Fqsqrt(gamma)
+        du = in_terms_of_normal_basis(du_in_poly_basis, normal_basis_gen)
+        assert(Ugen.subs({u1e: du[0],u2e: du[1],u3e: du[2]}) == 0)
+        #check the inverse being correct
+        new_gamma = sum([du[i]*(normal_basis_gen)^(qsqrt^i) for i in range(3)])
+        assert((new_gamma + c)/(new_gamma + sigma3(c)) == torus_element)
+        return  du
+        
     def rho(torus_element):
-        pdb.set_trace()    
+        pdb.set_trace()
         assert(torus_element.norm() == 1), "given element is not on the torus"
         beta = Fqsqrt6_quad_over_cubic(torus_element).vector()
         du_in_poly_basis = Fqsqrt3_cubic_over_Fqsqrt((1 + beta[0])/beta[1])
@@ -318,6 +353,8 @@ def algebraic_torus_rational_parametrization(q, Fq2 = None, Fq6 = None, Fq12 = N
         return ((du[1] - a_point[1])/(du[0] - a_point[0]), (du[2] - a_point[2])/(du[0]-a_point[0]))
 
     pdb.set_trace()
+    te = c**((13**12 - 1)/cyclotomic_polynomial(12)(13))
+    te_u = rho_u(te)
     #Now we compute the inverse map.(1+beta1)/b2
     #torus_projection_to_v1v2 = Fsqrt6_sqrt.hom([
     random_torus_element = torus_point_in_F6_sqrt_in_v1v2.subs({t:1, v1: 1, v2: 1})
@@ -428,6 +465,7 @@ if __name__ == '__main__':
     #Fq2, Fq6, Fq12, quad_min = generate_field_tower_quadratic_cubic_quadratic(q101)
     #torus_param = algebraic_torus_rational_parametrization(q101, Fq2, Fq6, Fq12, quad_min)
     torus_param = algebraic_torus_rational_parametrization(13)
+    torus_param = algebraic_torus_rational_parametrization(101)
     # torus_param = algebraic_torus_rational_parametrization(q101)
     
     # print(torus_param)
