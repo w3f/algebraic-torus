@@ -118,9 +118,39 @@ def algebraic_torus_rational_parametrization(q, Fq2 = None, Fq6 = None, Fq12 = N
     Fqsqrt6_quad_over_cubic = Fqsqrt6_quad.over(Fqsqrt3_cubic)
     Fqsqrt3_cubic_over_Fqsqrt = Fqsqrt3_cubic.over(Fqsqrt)
     
-    a  = Fqsqrt.gen()
-    b  = Fqsqrt3_cubic.gen()
-    c  = Fqsqrt6_quad.gen()    
+
+    b = Fqsqrt3_cubic.over(Fqsqrt).gen()
+    a = Fqsqrt2_quad.over(Fqsqrt).gen()
+    c  = Fqsqrt6_quad.gen()
+
+    cubic_root = b
+
+    try:
+        b_cube_root = cubic_root.nth_root(3)
+    except ValueError:
+        cubic_root = b^3
+        
+    normal_basis_gen = cubic_root^2+cubic_root+1
+
+    #pdb.set_trace()
+    found_non_residue = False
+    quad_non_residue = 0
+    mgroup_gen = Fqsqrt.primitive_element()
+    i = 0
+    while(not(found_non_residue) and i < Fqsqrt.order() - 1):
+        quad_non_residue = mgroup_gen**i
+        if quad_non_residue.is_square() == False:
+            found_non_residue = True
+        i+=1
+
+    #pdb.set_trace()
+    quad_root = Fqsqrt2_quad(quad_non_residue).square_root()
+    Fqsqrt6_quad_V, From_Fqsqrt6_quad_V, To_Fqsqrt6_quad_V = Fqsqrt6_quad.vector_space(base=Fqsqrt3_cubic, map=True, basis=[1,quad_root])        
+    
+    #we find a square in Fq2 which is none-square x in Fq and cubic root in Fq3
+    #which is not a cubic root in Fq and use basis alpha
+    # (alpha, sigma(alpha), sigma2(alpha^3), x.alpha, x.sigma(alpha), x.sigma2(alpha^3))
+    # from now on
 
     #First we create+ the field superfield using sage default.
     #Fqsqrt6.<c> = Fqsqrt.extension(6) # do we need this?
@@ -157,7 +187,7 @@ def algebraic_torus_rational_parametrization(q, Fq2 = None, Fq6 = None, Fq12 = N
     sigma1_cubic = Fqsqrt3_cubic.frobenius_endomorphism(2)
     sigma2_cubic = Fqsqrt3_cubic.frobenius_endomorphism(4)
 
-    pdb.set_trace()
+    #pdb.set_trace()
     sigma1_cubic_ext = A3_over_Fqsqrt3.hom([u1,u2,u3], codomain=A3_over_Fqsqrt3, base_map=sigma1_cubic)
     sigma2_cubic_ext = A3_over_Fqsqrt3.hom([u1,u2,u3], codomain=A3_over_Fqsqrt3, base_map=sigma2_cubic)
 
@@ -165,22 +195,7 @@ def algebraic_torus_rational_parametrization(q, Fq2 = None, Fq6 = None, Fq12 = N
 
     # see: https://hackmd.io/pqLq5-MBSNGGjX-A6PFWBw
     #normal_basis = [b^2+b+1, sigma2(b^2+b+1), sigma4(b^2+b+1)]
-    pdb.set_trace()
-    b = Fqsqrt3_cubic.over(Fqsqrt).gen()
-    normal_basis_gen = b^2 + b + 1
-    #first we try to use b to generate normal basis
-    normal_basis = [normal_basis_gen, normal_basis_gen^(qsqrt), normal_basis_gen^(qsqrt^2)]
-    try:
-        V, From_V, To_V = Fqsqrt3_cubic.vector_space(base=Fqsqrt, map=True, basis=normal_basis)
-
-    except ValueError:
-        cubic_residue = b
-        try:
-            b_cube_root = cubic_residue.nth_root(3)
-        except ValueError:
-            cubic_residue = b^3
-        
-        normal_basis_gen = cubic_residue^2+cubic_residue+1
+    #pdb.set_trace()
 
     # Now we have found the normal_basis_gen we can map it back to the default field
     normal_basis_gen = Fqsqrt3_cubic(normal_basis_gen)
@@ -191,7 +206,7 @@ def algebraic_torus_rational_parametrization(q, Fq2 = None, Fq6 = None, Fq12 = N
     #normal_basis_FF = [Fqsqrt3_cubic_as_FF(normal_basis_elm) for normal_basis_elm in normal_basis]
     #this step fails with ZeroDivisionError: input matrix must be nonsingular if it is not a basis
     #check linear independence to make sure we have hit a normal basis.
-    pdb.set_trace()
+    #pdb.set_trace()
     try:
         V, From_V, To_V = Fqsqrt3_cubic.vector_space(base=Fqsqrt, map=True, basis=normal_basis)
         assert(V.dimension() == 3)
@@ -233,17 +248,16 @@ def algebraic_torus_rational_parametrization(q, Fq2 = None, Fq6 = None, Fq12 = N
     Ugen2 =  norm_F6_over_F2(extend_A3_base(gamma) + c) - norm_F6_over_F2(extend_A3_base(gamma) + sigma3(c))
 
     # We actually need to generate Ugen using a square root x such that Fq(x) = Fq^2(x)
-    pdb.set_trace()
-    found_non_residue = False
-    non_residue = 0
-    while(not(found_non_residue)):
-        non_residue = Fqsqrt.random_element()
-        if not non_residue.is_square() == False:
-            found_non_residue = True
+    assert(Fqsqrt2_quad(quad_non_residue).is_square())
 
-    assert(Fqsqrt2_quad(non_residue).is_square())
-    Ugen2 = (sigma_ext(gamma)*sigma2_ext(gamma)+
-    
+    #pdb.set_trace()
+    # UsymBase.<sx> = GF(13**2, name='x', modulus=x**2 - 2, proof=false)
+    # USym.<g, sigg, sig2g> = PolynomialRing(UsymBase, 3)
+    # USymgen = (g + sx)*(sigg + sx)*(sig2g + sx) - (g - sx)*(sigg - sx)*(sig2g - sx)
+    # print(USymgen/(2*sx))
+
+    Ugen = gamma*sigma1_cubic_ext(gamma) + gamma * sigma2_cubic_ext(gamma) + (sigma1_cubic_ext(gamma) * sigma2_cubic_ext(gamma)) + quad_non_residue
+
     #we make new affine space for new variable names
     A2xt.<t,v1,v2> = PolynomialRing(Fqsqrt6_quad, 3)
     A2xt = A2xt.fraction_field()
@@ -251,36 +265,82 @@ def algebraic_torus_rational_parametrization(q, Fq2 = None, Fq6 = None, Fq12 = N
     def project_hypersurface_on_to_affine_plane(Ugen):
         #Note that the Ugen is a multivariate polynomial over Fq12
         # make sure U is a surface by checking the dimension
-        U = A3.ideal([Ugen])
+        #pdb.set_trace()
+        U = A3_over_Fqsqrt3.ideal([Ugen])
         assert(U.dimension() == 2)
 
         # Finding a tangent plane with nice coordinates 
         Uhs = AffineHypersurface(Ugen)
         M = Uhs.Jacobian_matrix()
         #ideal contatining the gradiant of all plane tangent an U at various points but parallel to xy plane
-        #chose one (randomly) with setting first coordinate = 1
+        #chose one (randomly) with setting first coordinate = 1        
         plane_ideal_norm_100 = Ideal(Ugen, M[0][1], M[0][2])
         V_tangent = plane_ideal_norm_100.variety()
+                        
+        def find_a_rational_point_on_variety():
+            for i in Fqsqrt:
+                for j in Fqsqrt:
+                    plane_ideal_norm_100 = Ideal(Ugen, u1 - i, u2 - j)
+                    if (len(plane_ideal_norm_100.variety())):
+                        return  plane_ideal_norm_100.variety()
+
+        a_point = []
+        if (len(V_tangent)):
+            a_point = (V_tangent[0]['u1'], V_tangent[0]['u2'], V_tangent[0]['u3'])
+            first_coordinate = 1 + a_point[0]
+            plane_normal = vector([1,0,0])
+            point_on_plane = vector(a_point) + plane_normal
+        else:
+            #we settle on finding any random point 
+            V_random = find_a_rational_point_on_variety()
+            a_point = (V_random[0]['u1'], V_random[0]['u2'], V_random[0]['u3'])
+            #we need to compute the equation of the plane. The plane has the same normal as
+            #as the jacobian at point a and passes a point 1 unit normal vector plus a.
+            plane_normal = vector([Fqsqrt3_cubic(M[0][0].subs({u1: a_point[0], u2: a_point[1], u3: a_point[2]})),
+                                  Fqsqrt3_cubic(M[0][1].subs({u1: a_point[0], u2: a_point[1], u3: a_point[2]})),
+                                  Fqsqrt3_cubic(M[0][2].subs({u1: a_point[0], u2: a_point[1], u3: a_point[2]}))]
+                                  )
+
+            point_on_plane = vector(a_point) + plane_normal
+            #given v1 and v2, we use equation of plane passing a + 1 point with a given normal
+            #to find the third coordinate.
+            #(x - point_on_plane[0], v1 - point_on_plane[1], v2 - point_on_plane[1]).plane_normal = 0
+            # (x - point_on_plane[0])*plane_normal[0] + (v1 - point_on_plane[1])*plane_normal[1] + (v2 - point_on_plane[2])*plane_nromal[2]  = 0
+            # x = (point_on_plane.plane_normal - v1*plane_normal[1] - v2*point_on_plane[1])/plane_normal[0]
+            assert(plane_normal[0] != 0)
+            first_coordinate = (point_on_plane.dot_product(plane_normal) - v1*plane_normal[1] - v2*plane_normal[2])/plane_normal[0]
+
+            # a + t*((first_coordinate, v1, v2) - a)
+            
 
         #the plane equation tangent at point (V1[0]['u1'], V1[0]['u2'], V1[0]['u3']) is 
         #u1 = V1[0]['u1']
-        a_point = (V_tangent[0]['u1e'], V_tangent[0]['u2e'], V_tangent[0]['u3e'])
-
+        #pdb.set_trace()
+        
         #intersecting V_tangent with the U to find the tangent point a
         #a_finder = Ugen.subs({u1:u1, w2: V1[0]['u2'], w3: V1[0]['u3']})
         #a_point = [a_finder.roots()[0][0], V1[0]['w2'], V1[0]['w3']]
-        assert(Ugen.subs({u1e: a_point[0], u2e: a_point[1], u3e: a_point[2]})== 0)
+        assert(Ugen.subs({u1: a_point[0], u2: a_point[1], u3: a_point[2]})== 0)
 
         #A2xt_FF.<tf,vf1,vf2> = PolynomialRing(Fqsqrt6, 3)
         #A2xt_FF = A2xt_FF.fraction_field()
 
         #A2xt_FF.hom([t,v1,v2], codomain=A2xt, base_map=FF_to_Fqsqrt6_quad)
 
-        pdb.set_trace()
-        #cross the line from a0 to (a0 + (1, v1, v2)) with U   
-        line_cross_U = Ugen.subs({u1e: a_point[0] + t, u2e:  a_point[1] + t*v1, u3e: a_point[2] + t*v2})
+        #pdb.set_trace()
+        #cross the line from a0 to the plane. We know it hit the plane at point (first_coordinate, v1, v2)
+        #if we were lucky and had a plane with u1 = 1 coordinate then the point is 
+        #(1+a0[0], v1, v2)
+        #otherwise it is:
+        # (first_coordinate, v1, v2)
+        # so now the line passing a0 and this point is
+        # a0 + t((first_coordinate, v1, v2) - a0)
+        # which if we are lucky this would be
+        # a0 + t(1, v1 -a1, v2 -a2) (then they make this change of coordinate to get rid of a1 and a2
+        #and pass it through U
+        line_cross_U = Ugen.subs({u1: a_point[0] + t*(first_coordinate - a_point[0]), u2:  a_point[1] + t*(v1 - a_point[1]), u3: a_point[2] + t*(v2 - a_point[2])})
         #here we just dividing by t because we know a0 is a ponit on U
-        assert(line_cross_U.subs({t : 0}) == 0)
+        assert(line_cross_U.subs({t : 0}) == 0);
         torus_t = (line_cross_U/t).numerator()
 
         #this gives you a degree 1 equation for t, to eleminate t and hence
@@ -298,25 +358,41 @@ def algebraic_torus_rational_parametrization(q, Fq2 = None, Fq6 = None, Fq12 = N
         #so you can subsitute for v1 and v2 and get t.
         t_in_v1_v2 =  t_in_v1_v2_num / t_in_v1_v2_denom
 
-        print("t in v1,v2: ", t_in_v1_v2.subs({t:1, v1: 1, v2:1}))
+        #pdb.set_trace()
+        #print("t in v1,v2: ", t_in_v1_v2.subs({t:1, v1: 1, v2:1}))
+        # t_11 = t_in_v1_v2.subs({t:1, v1: 1, v2:1})
 
+        #print("ld1: ",(first_coordinate - a_point[0]).subs({t:t_11 , v1: 1 , v2:1 }))
+        #print("ld2: ",(v1 - a_point[1]).subs({t:t_11 , v1: 1 , v2:1 }))
+        #print("ld3: ",(v2 - a_point[2]).subs({t:t_11 , v1: 1 , v2:1 }))
 
         #then you can subsitute for v1,v2 and t and get u1, u2 and u3 which you can subs
-        u1_in_v1v2 =  a_point[0] + t_in_v1_v2
-        u2_in_v1v2 =  a_point[1] + t_in_v1_v2*v1
-        u3_in_v1v2 =  a_point[2] + t_in_v1_v2*v2
+        u1_in_v1v2 =  a_point[0] + t_in_v1_v2*(first_coordinate - a_point[0])
+        u2_in_v1v2 =  a_point[1] + t_in_v1_v2*(v1 - a_point[1])
+        u3_in_v1v2 =  a_point[2] + t_in_v1_v2*(v2 - a_point[2])
 
-        return (u1_in_v1v2, u2_in_v1v2, u3_in_v1v2)
+        # u11 = u1_in_v1v2.subs({t:1 , v1: 1 , v2:1 })
+        # u12 = u2_in_v1v2.subs({t:1 , v1: 1 , v2:1 })
+        # u13 = u3_in_v1v2.subs({t:1 , v1: 1 , v2:1 })
 
-    pdb.set_trace()
-    u_in_v1v2 = project_hypersurface_on_to_affine_plane(Ugen)
+        # du = [u11,u12,u13]
+        # new_gamma = sum([du[i]*(normal_basis_gen)^(qsqrt^i) for i in range(3)])
+        # #print("new gamma", new_gamma)
+        # reconstructed_element = (new_gamma + quad_root)/(new_gamma + sigma3(quad_root))
+        # #print(reconstructed_element)
+
+        return (u1_in_v1v2, u2_in_v1v2, u3_in_v1v2), a_point, plane_normal
+
+    #pdb.set_trace()
+    u_in_v1v2,a_point, plane_normal = project_hypersurface_on_to_affine_plane(Ugen)
     #which gives you a gamma in v1 v2
+    #pdb.set_trace()
     sigma1_cubic_in_Fqsqrt6 = Fqsqrt6_quad.frobenius_endomorphism(2)
     sigma2_cubic_in_Fqsqrt6 = Fqsqrt6_quad.frobenius_endomorphism(4)
     sigma1_cubic_ext_to_v1v2 = A2xt.hom([t,v1,v2], codomain=A2xt, base_map=sigma1_cubic_in_Fqsqrt6)
-    sigma2_cubic_ext_to_v1v2 = A2xt.hom([t,v1,v2], codomain=A2xt, base_map=sigma4_cubic_in_Fqsqrt6)
+    sigma2_cubic_ext_to_v1v2 = A2xt.hom([t,v1,v2], codomain=A2xt, base_map=sigma2_cubic_in_Fqsqrt6)
 
-    pdb.set_trace()
+    #pdb.set_trace()
     gamma = u_in_v1v2[0]*normal_basis_gen + (sigma1_cubic_ext_to_v1v2(normal_basis_gen))*u_in_v1v2[1] + (sigma2_cubic_ext_to_v1v2(normal_basis_gen))*u_in_v1v2[2]
 
     #Fqsqrt6_quad_as_FF_ext = A2xt.hom([tf,vf1,vf2], codomain=A2xt_FF, base_map=Fqsqrt6_quad_as_FF)
@@ -327,43 +403,62 @@ def algebraic_torus_rational_parametrization(q, Fq2 = None, Fq6 = None, Fq12 = N
     #and finally the point on the torus
     #torus_point_in_F6_in_v1v2 = (gamma_in_FF + Fqsqrt6_quad_as_FF(c))/(gamma_in_FF + Fqsqrt6_quad_as_FF(sigma3(c)))
     #torus_point_back_in_F6_sqrt_in_v1v2 = FF_to_Fqsqrt6_quad_ext(torus_point_in_F6_in_v1v2)
-    torus_point_in_F6_sqrt_in_v1v2 = (gamma + c)/(gamma + sigma3(c))
+    torus_point_in_F6_sqrt_in_v1v2 = (gamma + quad_root)/(gamma + sigma3(quad_root))
     
     def rho_u(torus_element):
-        pdb.set_trace()
+        #pdb.set_trace()
         assert(norm_F6_over_F(torus_element) == 1), "given element is not on the torus"
-        beta = Fqsqrt6_quad_over_cubic(torus_element).vector()
+        beta = To_Fqsqrt6_quad_V(torus_element)
         gamma = (1 + beta[0])/beta[1]
-        assert((gamma + c)/(gamma + sigma3(c)) == torus_element)
+        assert((gamma + quad_root)/(gamma + sigma3(quad_root)) == torus_element)
         du_in_poly_basis = Fqsqrt3_cubic_over_Fqsqrt(gamma)
         du = in_terms_of_normal_basis(du_in_poly_basis, normal_basis_gen)
-        assert(Ugen.subs({u1e: du[0],u2e: du[1],u3e: du[2]}) == 0)
+        assert(Ugen.subs({u1: du[0],u2: du[1],u3: du[2]}) == 0)
         #check the inverse being correct
         new_gamma = sum([du[i]*(normal_basis_gen)^(qsqrt^i) for i in range(3)])
-        assert((new_gamma + c)/(new_gamma + sigma3(c)) == torus_element)
+        assert((new_gamma + quad_root)/(new_gamma + sigma3(quad_root)) == torus_element)
         return  du
         
-    def rho(torus_element):
-        pdb.set_trace()
+    def rho(torus_element, a_point, plane_norma):
         assert(torus_element.norm() == 1), "given element is not on the torus"
-        beta = Fqsqrt6_quad_over_cubic(torus_element).vector()
+        beta = To_Fqsqrt6_quad_V(torus_element)
         du_in_poly_basis = Fqsqrt3_cubic_over_Fqsqrt((1 + beta[0])/beta[1])
         du = in_terms_of_normal_basis(du_in_poly_basis, normal_basis_gen)
         assert(sum([du[i]*normal_basis[i] for i in range(Fqsqrt3_cubic_over_Fqsqrt.degree_over())])==du_in_poly_basis)
-        return ((du[1] - a_point[1])/(du[0] - a_point[0]), (du[2] - a_point[2])/(du[0]-a_point[0]))
+        #we need now to intersect the line between a0 and the torus_point and the projection plane and return the
+        #two last coordinates
 
-    pdb.set_trace()
-    te = c**((13**12 - 1)/cyclotomic_polynomial(12)(13))
-    te_u = rho_u(te)
+        #the line passes a_0 and has slope vector torus_point - a0
+        #pdb.set_trace()
+        line_direction = vector(du) - vector(a_point)                           
+
+        #the intersection coefficient is
+        t = (plane_normal.dot_product(plane_normal))/(line_direction.dot_product(plane_normal))
+
+        #intersection point
+        intersection_point = vector(a_point) + t* line_direction
+
+        #make sure intersection point is on the plane
+        point_on_plane = vector(a_point) + plane_normal
+        assert((intersection_point - point_on_plane).dot_product(plane_normal) == 0)
+
+        #make sure that the first_coordinate has been computed correctly
+        assert(intersection_point[0] == (point_on_plane.dot_product(plane_normal) - intersection_point[1]*plane_normal[1] - intersection_point[2]*plane_normal[2])/plane_normal[0])
+        
+        #return ((du[1] - a_point[1])/(du[0] - a_point[0]), (du[2] - a_point[2])/(du[0]-a_point[0]))
+        return intersection_point[1], intersection_point[2]
+
+    #te = c**((13**12 - 1)/cyclotomic_polynomial(12)(13))
+    #te_u = rho_u(te)
     #Now we compute the inverse map.(1+beta1)/b2
     #torus_projection_to_v1v2 = Fsqrt6_sqrt.hom([
     random_torus_element = torus_point_in_F6_sqrt_in_v1v2.subs({t:1, v1: 1, v2: 1})
-    re_on_V = rho(random_torus_element)
+    re_on_V = rho(random_torus_element, a_point, plane_normal)
 
-    print(random_torus_element)
-    print(torus_point_in_F6_sqrt_in_v1v2.subs({t:1, v1: re_on_V[0], v2: re_on_V[1]}))
+    print("decomp(1,1):\n",random_torus_element)
+    print("decomp(comp(decop(1,1))):\n",torus_point_in_F6_sqrt_in_v1v2.subs({t:1, v1: re_on_V[0], v2: re_on_V[1]}))
     assert(random_torus_element == torus_point_in_F6_sqrt_in_v1v2.subs({t:1, v1: re_on_V[0], v2: re_on_V[1]}))
-    
+
     return torus_point_in_F6_sqrt_in_v1v2
 
 def convert_ark_big_int_to_int(big_int_array):
@@ -464,9 +559,10 @@ if __name__ == '__main__':
     #Fq2, Fq6, Fq12 = generate_field_tower_quadratic_cubic_quadratic(q, nonresidue_quadratic_fq, nonresidue_cubic_fq2, nonresidue_quadratic_fq6)
     #Fq2, Fq6, Fq12, quad_min = generate_field_tower_quadratic_cubic_quadratic(q101)
     #torus_param = algebraic_torus_rational_parametrization(q101, Fq2, Fq6, Fq12, quad_min)
-    torus_param = algebraic_torus_rational_parametrization(13)
-    torus_param = algebraic_torus_rational_parametrization(101)
-    # torus_param = algebraic_torus_rational_parametrization(q101)
+    #torus_param = algebraic_torus_rational_parametrization(13)
+    #torus_param = algebraic_torus_rational_parametrization(101)
+    torus_param = algebraic_torus_rational_parametrization(Primes().unrank(6500))
+    #torus_param = algebraic_torus_rational_parametrization(q101)
     
     # print(torus_param)
     # #torus_param = algebraic_torus_rational_parametrization(q)
